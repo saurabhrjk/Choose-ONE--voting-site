@@ -1,0 +1,162 @@
+INSERT INTO candidates (name, description, image) VALUES
+('Candidate 1', 'Description of Candidate 1', 'images/candidates/candidate1.jpg'),
+('Candidate 2', 'Description of Candidate 2', 'images/candidates/candidate2.jpg');
+
+ALTER TABLE candidates ADD image VARCHAR(255);
+
+
+CREATE TABLE candidates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT
+);
+
+
+--------------------------------------------------
+
+ALTER TABLE users ADD UNIQUE (username);
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  has_voted BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE votes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  candidate VARCHAR(255) NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+========================================================
+voting_db
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<?php
+session_start();
+include_once '../config/database.php';
+
+// Fetch election data and results
+$database = new Database();
+$conn = $database->getConnection();
+$candidates_query = "SELECT name, description, image FROM candidates";
+$candidates_stmt = $conn->prepare($candidates_query);
+$candidates_stmt->execute();
+$candidates = $candidates_stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: rgb(103, 190, 224);
+            
+        }
+        .container{
+            background-color: rgb(186, 218, 231);
+            margin-top : 40px;
+            padding:30px;
+            border-radius:15px;
+            
+            box-shadow : 5px 5px 10px;
+        }
+        .candidate-card {
+            
+            margin-bottom: 20px;
+            border-radius:15px;
+            box-shadow : 5px 5px 10px;
+        }
+        .candidate-card img {
+            
+            border-radius:15px;
+            max-height: 200px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include Navbar -->
+    <?php include 'components/navbar.php'; ?>
+
+    <div class="container">
+        <!-- Candidate Information -->
+        <h3 class="my-4">Candidate Information</h3>
+        <div class="row">
+            <?php foreach ($candidates as $candidate) : ?>
+                <div class="col-md-4">
+                    <div class="card candidate-card">
+                        <?php if (!empty($candidate['image'])) : ?>
+                            <img src="<?php echo htmlspecialchars($candidate['image']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($candidate['name']); ?>">
+                        <?php endif; ?>
+                        <div class="card-body">
+                            <h5 class="card-title"><?php echo htmlspecialchars($candidate['name']); ?></h5>
+                            <p class="card-text"><?php echo htmlspecialchars($candidate['description']); ?></p>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Voting Form -->
+        <h3 class="my-4">Vote for Your Favorite Candidate</h3>
+        <form action="process_vote.php" method="POST">
+            <div class="form-group">
+                <label for="candidate">Choose your candidate:</label>
+                <select name="candidate" id="candidate" class="form-control" required>
+                    <option value="">--Select a Candidate--</option>
+                    <?php foreach ($candidates as $candidate) : ?>
+                        <option value="<?php echo htmlspecialchars($candidate['name']); ?>"><?php echo htmlspecialchars($candidate['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success">Submit Vote</button>
+        </form>
+
+        <!-- Display Live Results -->
+        <h3 class="my-4">Live Election Results:</h3>
+        <?php
+        $results_query = "SELECT candidate, COUNT(*) as votes FROM votes GROUP BY candidate";
+        $results_stmt = $conn->prepare($results_query);
+        $results_stmt->execute();
+        $results = $results_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($results as $result) {
+            echo "<p>" . htmlspecialchars($result['candidate']) . ": " . htmlspecialchars($result['votes']) . " votes</p>";
+        }
+        ?>
+    </div>
+
+</body>
+</html>
